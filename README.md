@@ -1,222 +1,77 @@
-# SEO Sites - Automatizador de Dados SEO
+# SEO Sites – Coletor de SEO (Search Console + GA4) para Google Sheets
 
-## 📋 Descrição
+## Visão geral
+Ferramenta em Python para preencher automaticamente relatórios de SEO em uma única aba do Google Sheets (`SEO SITES`).
 
-Este projeto é uma ferramenta de automação em Python que integra dados de SEO entre diferentes planilhas do Google Sheets. O sistema lê dados de uma planilha principal ("Sheet113") e atualiza automaticamente uma planilha de relatórios SEO ("SEO SITES") com métricas como impressões, cliques, CTR, posição média e sessões do GA4.
+Para cada domínio presente na aba, o script:
+- Lê o domínio (A) e, duas linhas abaixo, identifica o cabeçalho: Sessões | Impressões | Cliques | CTR | Posição | Sessões | FTD
+- Percorre as linhas de meses (jan-25, fev-25, …)
+- Para meses já encerrados com qualquer célula vazia, extrai métricas do Google Search Console e do GA4 e preenche apenas as células vazias
+- Nunca sobrescreve valores já preenchidos
 
-## 🎯 Objetivo
+Métricas preenchidas:
+- Impressões, Cliques (GSC)
+- CTR (calculada) e Posição média ponderada por Impressões (GSC)
+- Sessões (GA4)
+- FTD não é lido nem alterado
 
-Automatizar o processo de transferência e atualização de dados de SEO entre planilhas do Google Sheets, eliminando a necessidade de cópia manual e reduzindo erros humanos no processo de relatórios.
+## Requisitos
+- Python 3.8+
+- `credentials.json` (service account) com acesso a: Google Sheets API, Search Console API e GA4 Data API
+- GA4 via OAuth (opcional): `oauth_credentials.json` + login para gerar `token_ga4.json`; ou dar Viewer à service account no GA4
 
-## ⚡ Funcionalidades
-
-- **Integração Google Sheets**: Conecta-se automaticamente às planilhas via API do Google
-- **Normalização de URLs**: Padroniza URLs para comparação eficiente
-- **Mapeamento de Meses**: Converte datas numéricas para formato brasileiro (jan-25, fev-25, etc.)
-- **Atualização em Lote**: Utiliza batch updates para otimizar performance
-- **Sanitização de Dados**: Trata valores nulos, vazios e formata números corretamente
-- **Logs Detalhados**: Exibe informações sobre todas as operações realizadas
-
-### Métricas Processadas:
-- 📈 **Impressões** - Número de vezes que o site apareceu nos resultados de busca
-- 🖱️ **Cliques** - Número de cliques recebidos
-- 📊 **CTR (Click-Through Rate)** - Taxa de cliques
-- 📍 **Posição Média** - Posição média nos resultados de busca
-- 👥 **Sessões GA4** - Dados de sessões do Google Analytics 4
-
-## 🛠️ Tecnologias Utilizadas
-
-- **Python 3.x**
-- **gspread** - Biblioteca para integração com Google Sheets
-- **oauth2client** - Autenticação OAuth2 para Google APIs
-- **re** (regex) - Para processamento de strings e datas
-
-## 📦 Pré-requisitos
-
-1. **Python 3.6+** instalado no sistema
-2. **Conta Google** com acesso às planilhas
-3. **Projeto Google Cloud** configurado
-4. **Credenciais de Serviço** do Google Cloud
-
-## 🚀 Instalação
-
-### Passo 1: Clone ou baixe o projeto
+## Instalação
 ```bash
-git clone [URL_DO_REPOSITORIO]
-cd seo-sites
+pip install -r requirements.txt
 ```
 
-### Passo 2: Instale as dependências
-```bash
-pip install gspread oauth2client
-```
+## Configuração
+- Edite `config.py`:
+  - `SPREADSHEET_URL`: URL da planilha
+  - `ABA_DADOS_ORIGEM`: use `SEO SITES`
+  - `DOMAIN_CONFIGS`: mapeie propriedades por domínio, se quiser ID de GA4/SC específicos
+  - Exemplo:
+    ```python
+    DOMAIN_CONFIGS = {
+      'fortunerabbit-brasil.com': {
+        'ga4_property_id': '456043089',
+        'sc_site': 'https://fortunerabbit-brasil.com/'
+      }
+    }
+    ```
 
-### Passo 3: Configure as credenciais do Google
-
-1. Acesse o [Google Cloud Console](https://console.cloud.google.com/)
-2. Crie um novo projeto ou selecione um existente
-3. Ative as APIs necessárias:
-   - Google Sheets API
-   - Google Drive API
-4. Crie credenciais de conta de serviço:
-   - Vá para "APIs e Serviços" > "Credenciais"
-   - Clique em "Criar credenciais" > "Conta de serviço"
-   - Baixe o arquivo JSON das credenciais
-5. Renomeie o arquivo para `credentials.json` e coloque na pasta do projeto
-6. Compartilhe suas planilhas com o email da conta de serviço
-
-### Passo 4: Configure a planilha
-
-Certifique-se de que sua planilha Google Sheets possui:
-- Uma aba chamada **"Sheet113"** com os dados de origem
-- Uma aba chamada **"SEO SITES"** para os dados de destino
-- O formato correto de colunas conforme esperado pelo script
-
-## ▶️ Como Usar
-
-### Execução
+## Como usar
 ```bash
 python ler_seo-sites.py
 ```
+- 1: Sincronizar meses pendentes na SEO SITES (todos os domínios)
+- 2: Preencher um mês específico
+- 3: Testar conexões (GSC + GA4)
 
-O script apresenta um menu com duas opções:
+## Formatação dos dados
+- Todos os valores são gravados como números (sem aspas, sem %):
+  - CTR e Posição com 2 casas decimais (ex.: 5.94)
+  - Impressões, Cliques e Sessões como inteiros (ex.: 103)
 
-### **1. 🚀 Preenchimento Automático Completo**
-- Processa todos os meses disponíveis automaticamente
-- Atualiza todas as métricas de uma só vez
-- Modo original do script
-
-### **2. 🎯 Preenchimento Interativo por Mês**
-- **Nova funcionalidade!** 
-- Permite escolher um mês específico para preencher
-- Verifica se os dados estão disponíveis na Sheet113
-- Oferece opção de revisar dados se houver incompatibilidade
-
-### Fluxo do Modo Interativo:
-
-1. **📋 Lista meses disponíveis** na Sheet113
-2. **❓ Pergunta qual mês** você quer preencher
-3. **🔍 Verifica disponibilidade** dos dados
-4. **⚠️ Se não encontrar** → oferece opções:
-   - Revisar Sheet113 e tentar novamente
-   - Escolher outro mês
-   - Sair
-5. **✅ Se encontrar** → confirma e executa o preenchimento
-
-### Exemplo de Uso Interativo:
+## Estrutura do projeto
 ```
-🔧 AUTOMATIZADOR DE DADOS SEO - MENU PRINCIPAL
-1 - Preenchimento automático completo (modo original)
-2 - Preenchimento interativo por mês
-3 - Sair
-
-Escolha uma opção (1/2/3): 2
-
-🔄 PREENCHIMENTO INTERATIVO DE DADOS SEO
-
-📊 Meses disponíveis na Sheet113:
-   GSC (Search Console): mar-25, abr-25
-   GA4 (Analytics): mar-25, abr-25
-
-❓ Qual mês você deseja preencher?
-   Formato: mes-ano (ex: mar-25, jan-24)
-   Digite o mês: mar-25
-
-🔍 Verificando disponibilidade do mês 'mar-25':
-   GSC: ✅ Disponível
-   GA4: ✅ Disponível
-
-✅ Dados encontrados para 'mar-25'!
-   📈 Preenchendo dados do GSC (Search Console) e GA4 (Analytics)
-
-❓ Confirmar preenchimento para 'mar-25'? (s/n): s
-
-🚀 Iniciando preenchimento para mar-25...
-   📈 example.com → Impr: 1500, Clicks: 45, CTR: 3,00, Pos: 12,50
-   📊 example.com → Sessões: 890
-
-✅ 5 células atualizadas com sucesso!
+SEO-sites/
+├── api_extractor.py    # Lógica de extração e preenchimento por domínio/bloco
+├── ler_seo-sites.py    # Menu simples de execução
+├── config.py           # Configurações (planilha, aba, domínios)
+├── requirements.txt    # Dependências
+├── credentials.json    # Service account (não versionar)
+└── README.md
 ```
 
-### O que o script faz:
+## Dicas de solução de problemas
+- Search Console 403: adicione o email da service account como usuário da propriedade (ou ajuste `sc_site` em `DOMAIN_CONFIGS`)
+- GA4 sem login: conceda Viewer da propriedade ao email da service account ou configure OAuth desktop e gere `token_ga4.json`
+- Cabeçalho não encontrado: confirme que a linha do domínio está na coluna A e que o cabeçalho está duas linhas abaixo com os títulos acima
 
-1. **🔍 Conexão**: Conecta-se à planilha Google Sheets usando as credenciais
-2. **📊 Leitura**: Lê dados das abas "Sheet113" e "SEO SITES"
-3. **🔄 Processamento**: Normaliza URLs e mapeia dados entre as planilhas
-4. **✏️ Atualização**: Atualiza células vazias ou com valor "0" na planilha de destino
-5. **📈 Relatório**: Exibe logs detalhados das operações realizadas
+## Versão
+- v1.0.0
+  - Primeira versão estável do coletor: fluxo único, multi-domínio, atualização apenas de células vazias na aba `SEO SITES`, números em formato numérico.
 
-## 📁 Estrutura do Projeto
-
-```
-seo-sites/
-│
-├── ler_seo-sites.py           # Script principal com menu interativo
-├── credentials.json           # Credenciais Google (não incluído no git)
-├── credentials_example.json   # Exemplo da estrutura do arquivo de credenciais
-├── .gitignore                 # Arquivos e pastas ignorados pelo Git
-└── README.md                  # Este arquivo
-```
-
-## ⚙️ Configurações
-
-### URL da Planilha
-Para alterar a planilha alvo, modifique a variável `spreadsheet_url` no script:
-```python
-spreadsheet_url = 'SUA_URL_AQUI'
-```
-
-### Mapeamento de Meses
-O script mapeia automaticamente meses numéricos para o formato português:
-- 1 → jan, 2 → fev, 3 → mar, etc.
-
-## 🔧 Solução de Problemas
-
-### ❌ Erro de Autenticação
-- Verifique se o arquivo `credentials.json` está na pasta correta
-- Confirme se as planilhas foram compartilhadas com o email da conta de serviço
-
-### ❌ Aba não encontrada
-- Certifique-se de que as abas "Sheet113" e "SEO SITES" existem
-- Verifique se os nomes estão escritos exatamente como esperado
-
-### ❌ Dados não atualizados
-- O script só atualiza células vazias ou com valor "0"
-- Verifique se os URLs estão sendo normalizados corretamente
-
-## 📈 Versão
-
-**Versão Atual**: 2.0.0
-
-### Changelog:
-- **v2.0.0**: 
-  - ✨ **Nova funcionalidade**: Preenchimento interativo por mês
-  - 🎯 Menu principal com opções de modo automático ou interativo
-  - 🔍 Verificação inteligente de disponibilidade de dados
-  - ⚠️ Sistema de alerta para incompatibilidades de dados
-  - 🔄 Opção de revisar e tentar novamente
-  - 📊 Interface mais amigável com emojis e cores
-- **v1.0.0**: Versão inicial com funcionalidades básicas de sincronização de dados SEO
-
-## 🤝 Contribuição
-
-Para contribuir com o projeto:
-1. Faça um fork do repositório
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
-3. Commit suas mudanças (`git commit -am 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/nova-funcionalidade`)
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob a licença [MIT](LICENSE) - veja o arquivo LICENSE para mais detalhes.
-
-## 📞 Suporte
-
-Para dúvidas ou problemas:
-- Abra uma issue no repositório
-- Entre em contato com a equipe de desenvolvimento
-
----
-
-**Desenvolvido com ❤️ para automação de dados SEO** 
+## Licença
+MIT

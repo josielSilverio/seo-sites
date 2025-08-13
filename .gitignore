@@ -9,6 +9,13 @@ service-account-*.json
 client_secret*.json
 token.json
 
+# Arquivos de autenticação OAuth
+oauth_credentials.json
+token_ga4.json
+
+# Arquivos temporários
+debug_sheet113.py
+
 # Chaves de API e configurações sensíveis
 .env
 .env.local
@@ -280,4 +287,8 @@ output/
 
 # Arquivos de configuração local
 local_config.py
-settings_local.py 
+settings_local.py
+# Arquivos de credenciais
+*.pyc
+*.pyo
+*.pyd
